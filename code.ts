@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 300, height: 150 });
+figma.showUI(__html__, { width: 400, height: 600 });
 
 const currentXPositions: number[] = [];
 let lastYPosition = 0; // 마지막으로 생성된 테이블의 Y 위치를 저장하기 위한 전역 변수
@@ -23,6 +23,15 @@ figma.ui.onmessage = async msg => {
       figma.ui.postMessage({ type: 'error', message: 'Failed to load the font.' });
     }
 
+  } else if (msg.type === 'view-json') {
+    const nodes = figma.currentPage.selection;
+    if (nodes.length > 0) {
+      const node = nodes[0];
+      const jsonData = node.getPluginData("myJsonData");
+      if (jsonData) {
+        figma.ui.postMessage({ type: 'display-json', data: jsonData });
+      }
+    }
   } else if (msg.type === 'cancel') {
     figma.closePlugin();
   }
@@ -110,6 +119,9 @@ function createTableFromKeys(keys: string[], data: any, tableName: string = "Tab
   headerRowFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 }, opacity: 0.5 }];  // 테두리 설정
   headerRowFrame.strokeWeight = 1;  // 테두리 두께
   tableFrame.appendChild(headerRowFrame);
+
+  tableFrame.setPluginData("myJsonData", JSON.stringify(data));
+
 
 // Field 제목 셀
   const titleFieldCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, 'Field', 16);
