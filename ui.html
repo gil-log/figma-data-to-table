@@ -1,17 +1,22 @@
-<h2>Rectangle Creator</h2>
-<p>Count: <input id="count" value="5"></p>
-<button id="create">Create</button>
+<h2>JSON Key Reader</h2>
+<textarea id="jsonInput" style="width: 100%; height: 80px;"></textarea>
+<button id="getKeys">Generate Table</button>
 <button id="cancel">Cancel</button>
+<p id="errorMessage" style="color: red;"></p>
+
 <script>
+  document.getElementById('getKeys').onclick = () => {
+    const jsonData = document.getElementById('jsonInput').value;
+    parent.postMessage({ pluginMessage: { type: 'get-keys', data: jsonData } }, '*');
+  }
 
-document.getElementById('create').onclick = () => {
-  const textbox = document.getElementById('count');
-  const count = parseInt(textbox.value, 10);
-  parent.postMessage({ pluginMessage: { type: 'create-rectangles', count } }, '*')
-}
+  document.getElementById('cancel').onclick = () => {
+    parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+  }
 
-document.getElementById('cancel').onclick = () => {
-  parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*')
-}
-
+  window.onmessage = (event) => {
+    if (event.data.pluginMessage.type === 'error') {
+      document.getElementById('errorMessage').textContent = event.data.pluginMessage.message;
+    }
+  }
 </script>

@@ -1,34 +1,48 @@
-// This plugin will open a window to prompt the user to enter a number, and
-// it will then create that many rectangles on the screen.
+figma.showUI(__html__, { width: 300, height: 150 });
 
-// This file holds the main code for plugins. Code in this file has access to
-// the *figma document* via the figma global object.
-// You can access browser APIs in the <script> tag inside "ui.html" which has a
-// full browser environment (See https://www.figma.com/plugin-docs/how-plugins-run).
+figma.ui.onmessage = async msg => {
+  if (msg.type === 'get-keys') {
+    const data = JSON.parse(msg.data);
 
-// This shows the HTML page in "ui.html".
-figma.showUI(__html__);
-
-// Calls to "parent.postMessage" from within the HTML page will trigger this
-// callback. The callback will be passed the "pluginMessage" property of the
-// posted message.
-figma.ui.onmessage = msg => {
-  // One way of distinguishing between different types of messages sent from
-  // your HTML page is to use an object with a "type" property like this.
-  if (msg.type === 'create-rectangles') {
-    const nodes: SceneNode[] = [];
-    for (let i = 0; i < msg.count; i++) {
-      const rect = figma.createRectangle();
-      rect.x = i * 150;
-      rect.fills = [{type: 'SOLID', color: {r: 1, g: 0.5, b: 0}}];
-      figma.currentPage.appendChild(rect);
-      nodes.push(rect);
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+      figma.ui.postMessage({ type: 'error', message: 'Invalid JSON data. Make sure it is an object.' });
+      return;
     }
-    figma.currentPage.selection = nodes;
-    figma.viewport.scrollAndZoomIntoView(nodes);
-  }
 
-  // Make sure to close the plugin when you're done. Otherwise the plugin will
-  // keep running, which shows the cancel button at the bottom of the screen.
-  figma.closePlugin();
+    const keys = Object.keys(data);
+
+    // 폰트 로드
+    try {
+      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+      createTableFromKeys(keys);
+    } catch (error) {
+      figma.ui.postMessage({ type: 'error', message: 'Failed to load the font.' });
+    }
+
+  } else if (msg.type === 'cancel') {
+    figma.closePlugin();
+  }
 };
+
+function createTableFromKeys(keys: string[]) {
+  const tableHeight = 30;
+  const tableWidth = 150;
+
+  keys.forEach((key, index) => {
+    const rect = figma.createRectangle();
+    rect.x = 0;
+    rect.y = index * tableHeight;
+    rect.resize(tableWidth, tableHeight);
+    rect.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+
+    const text = figma.createText();
+    text.x = 10;
+    text.y = index * tableHeight + 5;
+    text.characters = key;
+
+    figma.currentPage.appendChild(rect);
+    figma.currentPage.appendChild(text);
+  });
+
+  figma.viewport.scrollAndZoomIntoView(figma.currentPage.children);
+}
