@@ -35,52 +35,131 @@ function getType(value: any): string {
 
 function createTableFromKeys(keys: string[], data: any) {
   const ROW_HEIGHT = 50;
-  const TABLE_WIDTH = 400;
-  const CELL_WIDTH = TABLE_WIDTH / 2;  // 우리가 2개의 셀만 가지고 있기 때문에
-  const TITLE_COLOR: RGB = { r: 0xD9 / 0xFF, g: 0xD9 / 0xFF, b: 0xD9 / 0xFF };
+  const TABLE_WIDTH = 800;  // 전체 테이블 너비 (예시로 800을 설정했지만 원하는대로 조정할 수 있습니다.)
+  const CELL_WIDTH = TABLE_WIDTH / 5;
+  const TITLE_COLOR: RGB = { r: 0x98 / 0xFF, g: 0xAE / 0xFF, b: 0xFE / 0xFF };
   const ROW_COLOR: RGB = { r: 0xDB / 0xFF, g: 0xE3 / 0xFF, b: 0x88 / 0xFF };
+  const FIELD_COLOR: RGB = { r: 0xD9 / 0xFF, g: 0xD9 / 0xFF, b: 0xD9 / 0xFF };
 
   const tableFrame = figma.createFrame();
-  tableFrame.resize(TABLE_WIDTH, (keys.length + 2) * ROW_HEIGHT);  // +2는 제목 행과 전체 테이블의 제목을 위함
+  tableFrame.resize(TABLE_WIDTH, (keys.length + 2) * ROW_HEIGHT);
   tableFrame.cornerRadius = 5;
   tableFrame.fills = [];
+
+  // 최상단 Frame에 Stroke 추가
+  tableFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+  tableFrame.strokeWeight = 1;
+  tableFrame.strokeAlign = "OUTSIDE";
+
   tableFrame.name = "Table";
 
-  // 제목 추가
-  const titleFieldCell = createCell(CELL_WIDTH, ROW_HEIGHT, TITLE_COLOR, 'Field', 16);
-  titleFieldCell.x = 0;
-  titleFieldCell.y = ROW_HEIGHT;
-  tableFrame.appendChild(titleFieldCell);
+  tableFrame.layoutMode = "VERTICAL";  // Vertical Auto Layout 설정
+  tableFrame.primaryAxisAlignItems = "CENTER";  // 중앙 정렬
+  tableFrame.counterAxisAlignItems = "CENTER";  // 중앙 정렬
+  tableFrame.itemSpacing = 0;  // 아이템 간격 설정
+  tableFrame.paddingTop = 0;  // 패딩 제거
+  tableFrame.paddingBottom = 0;
+  tableFrame.paddingLeft = 0;
+  tableFrame.paddingRight = 0;
 
-  const titleTypeCell = createCell(CELL_WIDTH, ROW_HEIGHT, TITLE_COLOR, 'Type', 16);
-  titleTypeCell.x = CELL_WIDTH;
-  titleTypeCell.y = ROW_HEIGHT;
-  tableFrame.appendChild(titleTypeCell);
+  // Table 제목
+  const tableTitleRow = createRow(TABLE_WIDTH, ROW_HEIGHT, TITLE_COLOR, "Model Name", 16);
+  tableTitleRow.y = 0;
+  tableFrame.appendChild(tableTitleRow);
 
-  // 각 키와 그에 해당하는 타입을 행으로 추가
-  keys.forEach(async (key, index) => {
+  // Header Row Frame 생성
+  const headerRowFrame = figma.createFrame();
+  headerRowFrame.resize(TABLE_WIDTH, ROW_HEIGHT);
+  headerRowFrame.backgrounds = [];
+  headerRowFrame.layoutMode = "HORIZONTAL";  // Horizontal Auto Layout 설정
+  headerRowFrame.primaryAxisAlignItems = "CENTER";  // 중앙 정렬
+  headerRowFrame.counterAxisAlignItems = "CENTER";  // 중앙 정렬
+  headerRowFrame.itemSpacing = 0;  // 아이템 간격 설정
+  headerRowFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 }, opacity: 0.5 }];  // 테두리 설정
+  headerRowFrame.strokeWeight = 1;  // 테두리 두께
+  tableFrame.appendChild(headerRowFrame);
+
+// Field 제목 셀
+  const titleFieldCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, 'Field', 16);
+  headerRowFrame.appendChild(titleFieldCell);
+
+// Type 제목 셀
+  const titleTypeCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, 'Type', 16);
+  headerRowFrame.appendChild(titleTypeCell);
+
+// Mandatory 제목 셀
+  const titleMandatoryCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, 'Mandatory', 16);
+  headerRowFrame.appendChild(titleMandatoryCell);
+
+// Description 제목 셀
+  const titleDescriptionCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, 'Description', 16);
+  headerRowFrame.appendChild(titleDescriptionCell);
+
+// Example 제목 셀
+  const titleExampleCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, 'Example', 16);
+  headerRowFrame.appendChild(titleExampleCell);
+
+
+  // 각 키와 그에 해당하는 타입, 예시를 행으로 추가
+  keys.forEach((key, index) => {
     const yPosition = (index + 2) * ROW_HEIGHT;
 
-    const keyCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, key, 14);
-    keyCell.x = 0;
-    keyCell.y = yPosition;
-    tableFrame.appendChild(keyCell);
+    // Row Frame
+    const rowFrame = figma.createFrame();
+    rowFrame.resize(TABLE_WIDTH, ROW_HEIGHT);
+    rowFrame.x = 0;
+    rowFrame.y = yPosition;
+    rowFrame.fills = [];
+    rowFrame.layoutMode = "HORIZONTAL";
+    rowFrame.primaryAxisAlignItems = "CENTER";
+    rowFrame.counterAxisAlignItems = "CENTER";
+    rowFrame.itemSpacing = 0;
+    rowFrame.counterAxisSizingMode = "AUTO";  // 세로 크기를 "Fill container"로 설정
 
-    const typeCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, await getType(data[key]), 14);
-    typeCell.x = CELL_WIDTH;
-    typeCell.y = yPosition;
-    tableFrame.appendChild(typeCell);
+    tableFrame.appendChild(rowFrame);
+
+    // Key 셀
+    const keyCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, key, 14);
+    rowFrame.appendChild(keyCell);
+
+    // Type 셀
+    const typeValue = getType(data[key]);
+    const typeCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, typeValue, 14);
+    rowFrame.appendChild(typeCell);
+
+// Mandatory 셀
+    const mandatoryCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, '', 14);  // 너비를 기본 셀 너비의 반으로 줄임
+    rowFrame.appendChild(mandatoryCell);
+
+// Description 셀
+    const descriptionCell = createCell(CELL_WIDTH , ROW_HEIGHT, ROW_COLOR, '', 14);  // 너비를 기본 셀 너비의 2배로 설정
+    rowFrame.appendChild(descriptionCell);
+
+// Example 셀
+    const exampleText = typeof data[key] === 'object' ? `"${key}": -` : `"${key}": "${data[key]}"`;
+    const exampleCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, exampleText, 14);  // 너비를 기본 셀 너비의 2배로 설정
+    rowFrame.appendChild(exampleCell);
   });
 
   figma.currentPage.appendChild(tableFrame);
   figma.viewport.scrollAndZoomIntoView([tableFrame]);
 }
 
-function createCell(width: number, height: number, color: RGB, textValue: string, fontSize: number): FrameNode {
-  const cellFrame = figma.createFrame();
-  cellFrame.resize(width, height);
-  cellFrame.backgrounds = [{ type: 'SOLID', color }];
-  cellFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+function createRow(width: number, height: number, color: RGB, textValue: string, fontSize: number): FrameNode {
+  const rowFrame = figma.createFrame();
+  rowFrame.resize(width, height);
+  rowFrame.backgrounds = [{ type: 'SOLID', color }];
+  rowFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 }, opacity: 0.5 }];
+  rowFrame.strokeWeight = 1;
+  rowFrame.strokeAlign = 'OUTSIDE';
+  rowFrame.clipsContent = true;
+  rowFrame.name = "Row";
+  rowFrame.layoutMode = "HORIZONTAL";
+  rowFrame.primaryAxisAlignItems = "CENTER";
+  rowFrame.counterAxisAlignItems = "CENTER";
+  rowFrame.minHeight = 50;                  // 최소 높이를 50으로 설정
+  rowFrame.counterAxisSizingMode = "AUTO";  // 세로 크기를 "Fill container"로 설정
+
 
   const cellText = figma.createText();
   cellText.fontName = { family: "Inter", style: "Regular" };
@@ -89,6 +168,41 @@ function createCell(width: number, height: number, color: RGB, textValue: string
   cellText.resize(width, height);
   cellText.textAlignHorizontal = 'CENTER';
   cellText.textAlignVertical = 'CENTER';
+
+  rowFrame.appendChild(cellText);
+
+  return rowFrame;
+}
+
+function createCell(width: number, height: number, color: RGB, textValue: string, fontSize: number): FrameNode {
+  const cellFrame = figma.createFrame();
+  cellFrame.resize(width, height);
+  cellFrame.backgrounds = [{ type: 'SOLID', color: color }];
+
+  // Auto Layout 설정 추가
+  cellFrame.layoutMode = "VERTICAL";  // Vertical Auto Layout 설정
+  cellFrame.primaryAxisAlignItems = "CENTER";  // 중앙 정렬
+  cellFrame.counterAxisAlignItems = "CENTER";  // 중앙 정렬
+  cellFrame.itemSpacing = 0;  // 아이템 간격 설정
+  cellFrame.minHeight = 50;                  // 최소 높이를 50으로 설정
+  cellFrame.counterAxisSizingMode = "FIXED";  // 세로 크기를 "Fill container"로 설정
+  cellFrame.counterAxisAlignItems = "CENTER";  // 세로 크기를 부모 프레임에 맞게 확장
+
+  // Stroke를 추가해 셀을 구분합니다.
+  cellFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+  cellFrame.strokeWeight = 1;
+  cellFrame.strokeAlign = "OUTSIDE";
+
+  const cellText = figma.createText();
+  cellText.fontName = { family: "Inter", style: "Regular" };
+  cellText.fontSize = fontSize;
+  cellText.characters = textValue;
+  cellText.textAlignHorizontal = 'CENTER';
+  cellText.textAlignVertical = 'CENTER';
+
+  // 텍스트를 셀 프레임의 중앙에 배치합니다.
+  cellText.x = (width - cellText.width) / 2;
+  cellText.y = (height - cellText.height) / 2;
 
   cellFrame.appendChild(cellText);
 
