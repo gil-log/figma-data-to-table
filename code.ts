@@ -139,6 +139,14 @@ function createTableFromKeys(keys: string[], data: any) {
     const exampleText = typeof data[key] === 'object' ? `"${key}": -` : `"${key}": "${data[key]}"`;
     const exampleCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, exampleText, 14);  // 너비를 기본 셀 너비의 2배로 설정
     rowFrame.appendChild(exampleCell);
+
+
+    // Check if the type is Object or Object Array and create a subtable if so
+    if (typeValue === 'Object' || typeValue === 'Object Array') {
+      const subData = typeValue === 'Object' ? data[key] : data[key][0];
+      const subKeys = Object.keys(subData);
+      createTableFromKeys(subKeys, subData);
+    }
   });
 
   figma.currentPage.appendChild(tableFrame);
