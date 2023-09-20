@@ -1,5 +1,9 @@
 figma.showUI(__html__, { width: 300, height: 150 });
 
+const currentXPositions: number[] = [];
+let lastYPosition = 0; // 마지막으로 생성된 테이블의 Y 위치를 저장하기 위한 전역 변수
+const GAP_BETWEEN_TABLES = 100; // 테이블 간의 간격
+
 figma.ui.onmessage = async msg => {
   if (msg.type === 'get-keys') {
     const data = JSON.parse(msg.data);
@@ -37,7 +41,7 @@ function toCamelCase(str: string): string {
   return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
 }
 
-function createTableFromKeys(keys: string[], data: any, tableName: string = "Table"): void {
+function createTableFromKeys(keys: string[], data: any, tableName: string = "Table", depth: number = 0): void {
   const ROW_HEIGHT = 50;
   const TABLE_WIDTH = 800;  // 전체 테이블 너비 (예시로 800을 설정했지만 원하는대로 조정할 수 있습니다.)
   const CELL_WIDTH = TABLE_WIDTH / 5;
@@ -45,10 +49,34 @@ function createTableFromKeys(keys: string[], data: any, tableName: string = "Tab
   const ROW_COLOR: RGB = { r: 0xDB / 0xFF, g: 0xE3 / 0xFF, b: 0x88 / 0xFF };
   const FIELD_COLOR: RGB = { r: 0xD9 / 0xFF, g: 0xD9 / 0xFF, b: 0xD9 / 0xFF };
 
+  // x 좌표 초기화
+  if (currentXPositions[depth] === undefined) {
+    currentXPositions[depth] = (currentXPositions[depth - 1] || 0) + TABLE_WIDTH + 50;
+  }
+
   const tableFrame = figma.createFrame();
   tableFrame.resize(TABLE_WIDTH, (keys.length + 2) * ROW_HEIGHT);
   tableFrame.cornerRadius = 5;
   tableFrame.fills = [];
+
+
+
+  // 테이블의 위치 조정
+  tableFrame.y = lastYPosition;
+
+  figma.currentPage.appendChild(tableFrame);
+  figma.viewport.scrollAndZoomIntoView([tableFrame]);
+
+  // 마지막 테이블의 Y 위치 업데이트
+  lastYPosition = tableFrame.y + tableFrame.height + GAP_BETWEEN_TABLES;
+
+  if (depth > 0) {
+    tableFrame.x = currentXPositions[depth - 1] + TABLE_WIDTH + 50; // 부모 테이블의 오른쪽에 자식 테이블 배치
+    currentXPositions[depth] = tableFrame.x; // 현재 depth의 x 좌표 업데이트
+  } else {
+    tableFrame.x = currentXPositions[depth];
+    currentXPositions[depth] += TABLE_WIDTH + 50;
+  }
 
   // 최상단 Frame에 Stroke 추가
   tableFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
@@ -154,7 +182,7 @@ function createTableFromKeys(keys: string[], data: any, tableName: string = "Tab
       const subData = Array.isArray(data[key]) ? data[key][0] : data[key];
       const subKeys = Object.keys(subData);
       const subTableName = toCamelCase(key);
-      createTableFromKeys(subKeys, subData, subTableName);
+      createTableFromKeys(subKeys, subData, subTableName, depth + 1);
     }
   });
 
