@@ -33,7 +33,11 @@ function getType(value: any): string {
   return 'Unknown';
 }
 
-function createTableFromKeys(keys: string[], data: any) {
+function toCamelCase(str: string): string {
+  return str.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+}
+
+function createTableFromKeys(keys: string[], data: any, tableName: string = "Table"): void {
   const ROW_HEIGHT = 50;
   const TABLE_WIDTH = 800;  // 전체 테이블 너비 (예시로 800을 설정했지만 원하는대로 조정할 수 있습니다.)
   const CELL_WIDTH = TABLE_WIDTH / 5;
@@ -51,7 +55,7 @@ function createTableFromKeys(keys: string[], data: any) {
   tableFrame.strokeWeight = 1;
   tableFrame.strokeAlign = "OUTSIDE";
 
-  tableFrame.name = "Table";
+  tableFrame.name = tableName;
 
   tableFrame.layoutMode = "VERTICAL";  // Vertical Auto Layout 설정
   tableFrame.primaryAxisAlignItems = "CENTER";  // 중앙 정렬
@@ -63,7 +67,7 @@ function createTableFromKeys(keys: string[], data: any) {
   tableFrame.paddingRight = 0;
 
   // Table 제목
-  const tableTitleRow = createRow(TABLE_WIDTH, ROW_HEIGHT, TITLE_COLOR, "Model Name", 16);
+  const tableTitleRow = createRow(TABLE_WIDTH, ROW_HEIGHT, TITLE_COLOR, tableName, 16);
   tableTitleRow.y = 0;
   tableFrame.appendChild(tableTitleRow);
 
@@ -123,7 +127,12 @@ function createTableFromKeys(keys: string[], data: any) {
     rowFrame.appendChild(keyCell);
 
     // Type 셀
-    const typeValue = getType(data[key]);
+    let typeValue = getType(data[key]);
+    if (typeValue === 'Object') {
+      typeValue = toCamelCase(key);
+    } else if (typeValue === 'Object Array') {
+      typeValue = toCamelCase(key) + '[]';
+    }
     const typeCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, typeValue, 14);
     rowFrame.appendChild(typeCell);
 
@@ -137,15 +146,15 @@ function createTableFromKeys(keys: string[], data: any) {
 
 // Example 셀
     const exampleText = typeof data[key] === 'object' ? `"${key}": -` : `"${key}": "${data[key]}"`;
-    const exampleCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, exampleText, 14);  // 너비를 기본 셀 너비의 2배로 설정
+    const exampleCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, exampleText, 14);
     rowFrame.appendChild(exampleCell);
 
-
     // Check if the type is Object or Object Array and create a subtable if so
-    if (typeValue === 'Object' || typeValue === 'Object Array') {
-      const subData = typeValue === 'Object' ? data[key] : data[key][0];
+    if (typeValue === toCamelCase(key) || typeValue === toCamelCase(key) + '[]') {
+      const subData = Array.isArray(data[key]) ? data[key][0] : data[key];
       const subKeys = Object.keys(subData);
-      createTableFromKeys(subKeys, subData);
+      const subTableName = toCamelCase(key);
+      createTableFromKeys(subKeys, subData, subTableName);
     }
   });
 
