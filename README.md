@@ -1,40 +1,81 @@
-Below are the steps to get your plugin running. You can also find instructions at:
+# <img src="imgs/data_to_table_128.png" width="29px"> Figma Data to Table Plugin 
 
-  https://www.figma.com/plugin-docs/plugin-quickstart-guide/
 
-This plugin template uses Typescript and NPM, two standard tools in creating JavaScript applications.
 
-First, download Node.js which comes with NPM. This will allow you to install TypeScript and other
-libraries. You can find the download link here:
+---
 
-  https://nodejs.org/en/download/
+The [Figma Data to Table Plugin](https://www.figma.com/community/plugin/1286190234862067264) is designed to streamline the workflow of designers and developers 
 
-Next, install TypeScript using the command:
+by allowing them to visualize and analyze JSON and XML data directly within the Figma interface. 
 
-  npm install -g typescript
 
-Finally, in the directory of your plugin, get the latest type definitions for the plugin API by running:
+With this plugin, you can easily convert structured data into organized tables, 
 
-  npm install --save-dev @figma/plugin-typings
+making it convenient for front-end (F) and back-end (B) developers to collaborate effectively on projects.
 
-If you are familiar with JavaScript, TypeScript will look very familiar. In fact, valid JavaScript code
-is already valid Typescript code.
+and back-end (B) developers to analyze and work with data directly within Figma.
 
-TypeScript adds type annotations to variables. This allows code editors such as Visual Studio Code
-to provide information about the Figma API while you are writing code, as well as help catch bugs
-you previously didn't notice.
+<img src="imgs/view_data.png">
 
-For more information, visit https://www.typescriptlang.org/
 
-Using TypeScript requires a compiler to convert TypeScript (code.ts) into JavaScript (code.js)
-for the browser to run.
+---
 
-We recommend writing TypeScript code using Visual Studio code:
+## Key Features
 
-1. Download Visual Studio Code if you haven't already: https://code.visualstudio.com/.
-2. Open this directory in Visual Studio Code.
-3. Compile TypeScript to JavaScript: Run the "Terminal > Run Build Task..." menu item,
-    then select "npm: watch". You will have to do this again every time
-    you reopen Visual Studio Code.
+- **Data Visualization**
+  - Input your JSON or XML data, and the plugin will generate a structured table within Figma, providing a visual representation of your data.
+  - Child Objects are created in a separate table positioned at the bottom right of their parent Object. 
+  - This allows for an intuitive representation of nested data structures.
+  - Sibling Objects are created at the same depth, visually representing data structures at the same hierarchical level.
+  - This makes it easy for designers to incorporate data-driven elements into their designs.
+- <img src="imgs/create_table.png">
 
-That's it! Visual Studio Code will regenerate the JavaScript file every time you save.
+<br>
+
+- **Data Analysis**
+  - Developers (B-E) can utilize the generated tables to analyze and understand the underlying data structure. 
+  - This feature simplifies the process of extracting key information from complex data sets.
+
+<br>
+
+- **Source Data View**
+  - Clicking on the generated table allows you to access the raw source data directly within Figma. 
+  - This makes it effortless for developers to inspect and work with JSON, XML, and other data formats, 
+  - enhancing collaboration between design and development teams.
+  - <img src="imgs/view_data.png">
+    
+---
+
+## How It Works
+
+1. Input Data
+   1. Simply paste your JSON or XML data into the plugin's input field.
+
+2. Generate Tables
+   1. Click the "Generate Table" button, and the plugin will create a structured table based on your data.
+
+3. Data Analysis
+   1. Developers can use the generated table to quickly understand the data structure and extract relevant information.
+
+4. Source Data View
+   1. Click the table and use the "View Data" feature to access the raw source data, making it easier to work with the data directly in Figma.
+
+---
+
+## Collaboration Made Easy
+
+The Figma `Data to Table` Plugin bridges the gap between design and development by providing a seamless way to visualize, analyze, and work with data. 
+
+It empowers designers to incorporate real data into their designs and enables developers to gain insights from the design files. 
+
+This collaborative approach enhances the overall project workflow and communication between design and development teams.
+
+---
+
+## Feedback and Support
+
+If you have any questions, encounter issues, or wish to provide feedback or suggestions for improvements,
+
+please feel free to reach out to us via email at [swgil007@naver.com](mailto:swgil007@naver.com) or [Figma Data to Table Plugin Page Comments](https://www.figma.com/community/plugin/1286190234862067264)
+
+Your input is valuable and greatly appreciated as it helps us enhance the Figma `Data to Table` Plugin.

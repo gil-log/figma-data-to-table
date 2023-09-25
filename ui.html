@@ -1,12 +1,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DATA Key Reader</title>
+  <title>DATA to Table</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 15px;
       background-color: #f4f4f4;
+      position: relative;
     }
 
     h2 {
@@ -21,6 +22,8 @@
       border-radius: 4px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
       resize: none;
+      width: 100%;
+      height: 80px;
     }
 
     button {
@@ -40,7 +43,6 @@
 
     #cancel {
       background-color: #d9534f;
-      margin-left: 10px;
     }
 
     #cancel:hover {
@@ -50,6 +52,7 @@
     #errorMessage {
       margin-top: 10px;
       font-weight: bold;
+      color: red;
     }
 
     pre {
@@ -60,28 +63,54 @@
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       margin-top: 20px;
       overflow: auto;
-      height: 200px; /* 이전에 설정한 높이 값 */
-      white-space: pre-wrap; /* 줄 바꿈을 유지합니다. */
-      word-wrap: break-word; /* 단어가 너무 길면 줄을 바꿉니다. */
+      height: 200px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    #bottomText {
+      width: 100%;
+      text-align: center;
+      font-size: 14px;
+      color: #777;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    #bottomText a {
+      color: #007BFF;
+      text-decoration: none;
+    }
+
+    .buttonArea {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
   </style>
 </head>
 <body>
-<h2>DATA Key Reader</h2>
-<p>Enter your JSON data below and click "Generate Table" to visualize it. <br>
-  And You Can Click Generated Table & Click "View DATA" to display the raw DATA.</p>
-<textarea id="jsonInput" style="width: 100%; height: 80px;"></textarea>
-<div style="margin-top: 15px;">
+<h2>DATA to Table</h2>
+<p>Enter your JSON or XML data below and click "Generate Table" to visualize it. <br>
+  And you can click the generated table and click "View DATA" to display the raw DATA.</p>
+<p>For XML data, the "xml" property will be used as the main content. Any other attributes will be included in the JSON data.</p>
+
+<textarea id="jsonInput"></textarea>
+<div class="buttonArea">
   <button id="getKeys">Generate Table</button>
-  <button id="viewJson">View DATA</button>
+  <button id="viewData">View DATA</button>
   <button id="cancel">Cancel</button>
 </div>
-<p id="errorMessage" style="color: red;"></p>
-<pre id="jsonDisplay"></pre>
-
-<div style="position: absolute; bottom: 10px; width: 100%; text-align: center;">
-  Made by.
-  <a href="https://github.com/gil-log" target="_blank" rel="noopener noreferrer">GilLog</a>
+<p id="errorMessage"></p>
+<pre id="dataDisplay"></pre>
+<div id="bottomText">
+  <a href="https://github.com/gil-log/figma-data-to-table" target="_blank" rel="noopener noreferrer">
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M16 0C7.16 0 0 7.16 0 16C0 23.08 4.58 29.06 10.94 31.18C11.74 31.32 12.04 30.84 12.04 30.42C12.04 30.04 12.02 28.78 12.02 27.44C8 28.18 6.96 26.46 6.64 25.56C6.46 25.1 5.68 23.68 5 23.3C4.44 23 3.64 22.26 4.98 22.24C6.24 22.22 7.14 23.4 7.44 23.88C8.88 26.3 11.18 25.62 12.1 25.2C12.24 24.16 12.66 23.46 13.12 23.06C9.56 22.66 5.84 21.28 5.84 15.16C5.84 13.42 6.46 11.98 7.48 10.86C7.32 10.46 6.76 8.82 7.64 6.62C7.64 6.62 8.98 6.2 12.04 8.26C13.32 7.9 14.68 7.72 16.04 7.72C17.4 7.72 18.76 7.9 20.04 8.26C23.1 6.18 24.44 6.62 24.44 6.62C25.32 8.82 24.76 10.46 24.6 10.86C25.62 11.98 26.24 13.4 26.24 15.16C26.24 21.3 22.5 22.66 18.94 23.06C19.52 23.56 20.02 24.52 20.02 26.02C20.02 28.16 20 29.88 20 30.42C20 30.84 20.3 31.34 21.1 31.18C27.42 29.06 32 23.06 32 16C32 7.16 24.84 0 16 0V0Z" fill="white"/>
+  </svg>
+    GitHub Repository
+  </a>
 </div>
 <script>
   document.getElementById('getKeys').onclick = () => {
@@ -89,8 +118,8 @@
     parent.postMessage({ pluginMessage: { type: 'get-keys', data: jsonData } }, '*');
   }
 
-  document.getElementById("viewJson").addEventListener("click", function() {
-    parent.postMessage({ pluginMessage: { type: 'view-json' } }, '*');
+  document.getElementById("viewData").addEventListener("click", function () {
+    parent.postMessage({ pluginMessage: { type: 'view-data' } }, '*');
   });
 
   document.getElementById('cancel').onclick = () => {
@@ -101,14 +130,19 @@
     if (event.data.pluginMessage.type === 'error') {
       document.getElementById('errorMessage').textContent = event.data.pluginMessage.message;
     }
-    if (event.data.pluginMessage.type === 'display-json') {
+    if (event.data.pluginMessage.type === 'display-data') {
       const jsonData = event.data.pluginMessage.data;
-      displayJSON(jsonData);
+      displayData(jsonData);
     }
   }
-  function displayJSON(jsonData) {
-    const jsonDisplayElement = document.getElementById("jsonDisplay");
-    const prettyJson = JSON.stringify(JSON.parse(jsonData), null, 2);  // 2칸 인덴트로 보기 좋게 만듭니다.
-    jsonDisplayElement.textContent = prettyJson;
+
+  function displayData(data) {
+    const dataDisplayElement = document.getElementById("dataDisplay");
+    try {
+      dataDisplayElement.textContent = JSON.stringify(JSON.parse(data), null, 2);
+    } catch (e) {
+      dataDisplayElement.textContent = data;
+    }
   }
 </script>
+</body>
