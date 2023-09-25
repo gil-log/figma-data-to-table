@@ -6,6 +6,13 @@ const GAP_BETWEEN_TABLES = 100; // 테이블 간의 간격
 
 figma.ui.onmessage = async msg => {
   if (msg.type === 'get-keys') {
+
+    console.log(parseNode(msg.data));
+
+
+    return;
+
+
     const data = JSON.parse(msg.data);
 
     if (typeof data !== 'object' || data === null || Array.isArray(data)) {
@@ -264,4 +271,46 @@ function createCell(width: number, height: number, color: RGB, textValue: string
   cellFrame.appendChild(cellText);
 
   return cellFrame;
+}
+
+type XmlNode = {
+  attributes?: { [key: string]: string };
+  value?: string;
+  [key: string]: any;  // 여기서는 XmlNode 혹은 다른 값을 가질 수 있도록 추가했습니다.
+};
+
+function parseNode(xml: string): XmlNode {
+  const attributesPattern = /(\w+)=["'](.*?)["']/g;
+  const nodePattern = /<(\w+)([^>]*)>([\s\S]*?)<\/\1>|<(\w+)([^>]*)\/>/g;
+
+  let match;
+  const result: XmlNode = {};
+
+  while (match = nodePattern.exec(xml)) {
+    let tagName = match[1] || match[4];
+    let innerAttributes = match[2] || match[5];
+    let innerContent = match[3];
+
+    let attributesMatch;
+    const attributes: { [key: string]: string } = {};
+
+    while (attributesMatch = attributesPattern.exec(innerAttributes)) {
+      attributes[attributesMatch[1]] = attributesMatch[2];
+    }
+
+    const node: XmlNode = {
+      attributes: Object.keys(attributes).length ? attributes : undefined,
+    };
+
+    if (innerContent && /<.*>/.test(innerContent)) {
+      Object.assign(node, parseNode(innerContent));
+    } else if (innerContent) {
+      const cdataMatch = innerContent.match(/<!\[CDATA\[(.*?)\]\]>/);
+      node.value = cdataMatch ? cdataMatch[1] : innerContent.trim();
+    }
+
+    result[tagName] = node;
+  }
+
+  return result;
 }
