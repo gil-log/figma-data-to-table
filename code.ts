@@ -9,7 +9,7 @@ figma.ui.onmessage = async msg => {
       data = parseNode(msg.data);
       fromJson = false;
     } else {
-      data = JSON.parse(msg.data);
+      data = JSON.parse(removeControlCharacters(msg.data));
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
         figma.ui.postMessage({ type: 'error', message: 'Invalid JSON or XML data. Make sure it is an object.' });
         return;
@@ -338,4 +338,8 @@ function parseNode(xml: string, parentXml = ""): XmlNode {
     result.xml = parentXml;
   }
   return result;
+}
+
+function removeControlCharacters(str: string): string {
+  return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
 }
