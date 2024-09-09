@@ -5,9 +5,27 @@ figma.ui.onmessage = async msg => {
     let data;
     let fromJson = true;
     const xmlPattern = /^<[?\w+]/;
+    const ddlPattern = /^CREATE\s+TABLE/i;
     if (xmlPattern.test(msg.data)) {
       data = parseNode(msg.data);
       fromJson = false;
+    }
+    else if (ddlPattern.test(msg.data)) {
+      const ddlData = parseDDL(msg.data);
+      const tableName = parseTableName(msg.data);
+
+      if (ddlData.length === 0) {
+        figma.ui.postMessage({ type: 'error', message: 'Invalid DDL.' });
+        return;
+      }
+      try {
+        await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+        createTableFromDDLData(ddlData, tableName, msg.data);
+      } catch (error) {
+        // @ts-ignore
+        figma.ui.postMessage({ type: 'error', message: error?.message });
+      }
+      return;
     } else {
       data = JSON.parse(removeControlCharacters(msg.data));
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
@@ -28,7 +46,7 @@ figma.ui.onmessage = async msg => {
       const node = nodes[0];
       let jsonData = node.getPluginData("myJsonData");
       if (!jsonData) {
-        jsonData = node.getPluginData("myXmlData");
+        jsonData = node.getPluginData("rawData");
       }
       if (jsonData) {
         figma.ui.postMessage({ type: 'display-data', data: jsonData });
@@ -39,7 +57,7 @@ figma.ui.onmessage = async msg => {
   }
 };
 
-const currentXPositions: number[] = [];
+const currentXPositions: number[] = [0];
 let lastYPosition = 0;
 const GAP_BETWEEN_TABLES = 100;
 
@@ -122,7 +140,7 @@ function createTableFromKeys(keys: string[], data: any, fromJson: boolean = true
     tableFrame.setPluginData("myJsonData", JSON.stringify(data));
   } else {
     const xmlData = data.xml === undefined ? "" : data.xml;
-    tableFrame.setPluginData("myXmlData", xmlData);
+    tableFrame.setPluginData("rawData", xmlData);
   }
 
   const titleFieldCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, 'Field', 16);
@@ -280,6 +298,10 @@ function createCell(width: number, height: number, color: RGB, textValue: string
   cellText.fontName = { family: "Inter", style: "Regular" };
   cellText.fontSize = fontSize;
   cellText.characters = textValue;
+
+  cellText.textAutoResize = "HEIGHT";
+  cellText.textTruncation = "ENDING";
+
   cellText.textAlignHorizontal = 'CENTER';
   cellText.textAlignVertical = 'CENTER';
 
@@ -342,4 +364,153 @@ function parseNode(xml: string, parentXml = ""): XmlNode {
 
 function removeControlCharacters(str: string): string {
   return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+}
+
+function parseDDL(ddl: string): any[] {
+  const columns: any[] = [];
+
+  const tableDefinitionMatch = ddl.match(/create\s+table\s+\w+\.\w+\s*\(([\s\S]+?)\)\s*(comment\s+'.*?')?\s*;/i);
+  if (!tableDefinitionMatch) {
+    return columns;
+  }
+
+  const tableDefinition = tableDefinitionMatch[1];
+
+  const columnRegex = /(\w+)\s+(enum\s*\([^)]+\)|\w+\(\d+\)|\w+)\s*(.*?)\s*(?:\sCOMMENT\s+'((?:[^']|\\')*)')?\s*(?:,|\n|\r\n)/gi;
+
+  let match;
+  while ((match = columnRegex.exec(tableDefinition)) !== null) {
+    let columnName = match[1];
+    let columnType = match[2];
+    let constraints = match[3] || '';
+    let comment = match[4] || '';
+
+    if (comment) {
+      constraints = constraints.replace(/\s*COMMENT\s+'[^']*'/, '').trim();
+    }
+
+    constraints = constraints.replace(/\s+/g, ' ').trim();
+
+    if (columnType.startsWith('enum')) {
+      columnType = columnType.replace(/\s*\(\s*/g, "(").replace(/\s*\)\s*/g, ")").replace(/\s*,\s*/g, ", ");
+    }
+
+    columns.push({
+      name: columnName,
+      type: columnType,
+      constraints: constraints,
+      comment: comment
+    });
+  }
+
+  return columns;
+}
+
+function parseTableName(ddl: string): string {
+  const tableNameMatch = ddl.match(/create\s+table\s+(\w+\.\w+)\s*\(/i);
+  return tableNameMatch ? tableNameMatch[1] : "Unnamed Table";
+}
+
+function createTableFromDDLData(ddlData: any[], tableName: string, rawData: string): void {
+  const ROW_HEIGHT = 50;
+  const TABLE_WIDTH = 1000;
+  const CELL_WIDTH = TABLE_WIDTH / 4;
+  const TITLE_COLOR: RGB = { r: 0xE4 / 0xFF, g: 0x6E / 0xFF, b: 0x6E / 0xFF };
+  const ROW_COLOR: RGB = { r: 0xC6 / 0xFF, g: 0xFF / 0xFF, b: 0xC6 / 0xFF };
+  const FIELD_COLOR: RGB = { r: 0xD9 / 0xFF, g: 0xD9 / 0xFF, b: 0xD9 / 0xFF };
+
+  const tableFrame = figma.createFrame();
+  tableFrame.resize(TABLE_WIDTH, (ddlData.length + 2) * ROW_HEIGHT);
+  tableFrame.cornerRadius = 5;
+  tableFrame.fills = [];
+
+  tableFrame.y = lastYPosition;
+  figma.currentPage.appendChild(tableFrame);
+  figma.viewport.scrollAndZoomIntoView([tableFrame]);
+
+  lastYPosition = tableFrame.y + tableFrame.height + GAP_BETWEEN_TABLES;
+
+  if (currentXPositions[0] === undefined) {
+    currentXPositions[0] = 0;
+  }
+  tableFrame.x = currentXPositions[0];
+  currentXPositions[0] += TABLE_WIDTH + 50;
+
+  tableFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+  tableFrame.strokeWeight = 1;
+  tableFrame.strokeAlign = "OUTSIDE";
+
+  tableFrame.name = tableName;
+
+  tableFrame.setPluginData("rawData", rawData);
+
+  const titleRowFrame = figma.createFrame();
+  titleRowFrame.resize(TABLE_WIDTH, ROW_HEIGHT);
+  titleRowFrame.fills = [{ type: 'SOLID', color: TITLE_COLOR }];
+  titleRowFrame.layoutMode = "HORIZONTAL";
+  titleRowFrame.primaryAxisAlignItems = "CENTER";
+  titleRowFrame.counterAxisAlignItems = "CENTER";
+  titleRowFrame.itemSpacing = 0;
+  titleRowFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 }, opacity: 0.5 }];
+  titleRowFrame.strokeWeight = 1;
+  titleRowFrame.y = 0;
+  tableFrame.appendChild(titleRowFrame);
+
+  const titleCell = createCell(TABLE_WIDTH, ROW_HEIGHT, TITLE_COLOR, tableName, 20);
+  titleRowFrame.appendChild(titleCell);
+
+  const headerRowFrame = figma.createFrame();
+  headerRowFrame.resize(TABLE_WIDTH, ROW_HEIGHT);
+  headerRowFrame.backgrounds = [];
+  headerRowFrame.layoutMode = "HORIZONTAL";
+  headerRowFrame.primaryAxisAlignItems = "CENTER";
+  headerRowFrame.counterAxisAlignItems = "CENTER";
+  headerRowFrame.itemSpacing = 0;
+  headerRowFrame.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 }, opacity: 0.5 }];
+  headerRowFrame.strokeWeight = 1;
+  headerRowFrame.y = ROW_HEIGHT;
+  tableFrame.appendChild(headerRowFrame);
+
+  const headers = ['Field', 'Type', 'Constraints', 'Comment'];
+  headers.forEach(header => {
+    const headerCell = createCell(CELL_WIDTH, ROW_HEIGHT, FIELD_COLOR, header, 16);
+    headerRowFrame.appendChild(headerCell);
+  });
+
+  ddlData.forEach((column, index) => {
+    const yPosition = (index + 2) * ROW_HEIGHT;
+    const rowFrame = figma.createFrame();
+
+    rowFrame.resize(TABLE_WIDTH, ROW_HEIGHT);
+    rowFrame.x = 0;
+    rowFrame.y = yPosition;
+    rowFrame.fills = [];
+    rowFrame.layoutMode = "HORIZONTAL";
+    rowFrame.primaryAxisAlignItems = "CENTER";
+    rowFrame.counterAxisAlignItems = "CENTER";
+    rowFrame.itemSpacing = 0;
+    rowFrame.counterAxisSizingMode = "AUTO";
+
+    tableFrame.appendChild(rowFrame);
+
+    const keyCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, column.name, 14);
+    rowFrame.appendChild(keyCell);
+
+    const typeCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, column.type, 14);
+    rowFrame.appendChild(typeCell);
+
+    const constraints = `${column.constraints || ''}`;
+    const constraintsCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, constraints.trim(), 14);
+    rowFrame.appendChild(constraintsCell);
+
+    const commentText = (column.comment || '').replace(/\n|\r\n/g, ', ');
+    const commentCell = createCell(CELL_WIDTH, ROW_HEIGHT, ROW_COLOR, commentText, 14);
+    commentCell.layoutMode = 'VERTICAL';
+    commentCell.primaryAxisSizingMode = 'FIXED';
+    rowFrame.appendChild(commentCell);
+    rowFrame.setPluginData("rawData", commentText);
+  });
+
+  figma.currentPage.appendChild(tableFrame);
+  figma.viewport.scrollAndZoomIntoView([tableFrame]);
 }
