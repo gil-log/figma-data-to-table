@@ -12,7 +12,7 @@ figma.ui.onmessage = async msg => {
     }
     else if (ddlPattern.test(msg.data)) {
       const ddlData = parseDDL(msg.data);
-      const tableName = parseTableName(msg.data);
+      const tableName = parseTableNameWithComment(msg.data);
 
       if (ddlData.length === 0) {
         figma.ui.postMessage({ type: 'error', message: 'Invalid DDL.' });
@@ -369,12 +369,12 @@ function removeControlCharacters(str: string): string {
 function parseDDL(ddl: string): any[] {
   const columns: any[] = [];
 
-  const tableDefinitionMatch = ddl.match(/create\s+table\s+\w+\.\w+\s*\(([\s\S]+?)\)\s*(comment\s+'.*?')?\s*;/i);
+  const tableDefinitionMatch = ddl.match(/create\s+table\s+(?:\w+\.)?(\w+)\s*\(([\s\S]+?)\)\s*(comment\s+'.*?')?\s*;/i);
   if (!tableDefinitionMatch) {
     return columns;
   }
 
-  const tableDefinition = tableDefinitionMatch[1];
+  const tableDefinition = tableDefinitionMatch[2];
 
   const columnRegex = /(\w+)\s+(enum\s*\([^)]+\)|\w+\(\d+\)|\w+)\s*(.*?)\s*(?:\sCOMMENT\s+'((?:[^']|\\')*)')?\s*(?:,|\n|\r\n)/gi;
 
@@ -394,7 +394,9 @@ function parseDDL(ddl: string): any[] {
     if (columnType.startsWith('enum')) {
       columnType = columnType.replace(/\s*\(\s*/g, "(").replace(/\s*\)\s*/g, ")").replace(/\s*,\s*/g, ", ");
     }
-
+    if(columnType === 'key' && columnName === 'primary') {
+      continue;
+    }
     columns.push({
       name: columnName,
       type: columnType,
@@ -407,8 +409,19 @@ function parseDDL(ddl: string): any[] {
 }
 
 function parseTableName(ddl: string): string {
-  const tableNameMatch = ddl.match(/create\s+table\s+(\w+\.\w+)\s*\(/i);
-  return tableNameMatch ? tableNameMatch[1] : "Unnamed Table";
+  const tableNameMatch = ddl.match(/create\s+table\s+(?:\w+\.)?(\w+)\s*\(/i);
+  return tableNameMatch ? tableNameMatch[2] || tableNameMatch[1] : "Unnamed Table";
+}
+
+function extractTableComment(ddl: string): string {
+  const commentMatch = ddl.match(/\)\s*comment\s+'([^']*)'/i);
+  return commentMatch ? commentMatch[1].replace(/\n/g, " ") : '';
+}
+
+function parseTableNameWithComment(ddl: string): string {
+  const tableName = parseTableName(ddl);
+  const tableComment = extractTableComment(ddl);
+  return tableComment ? `${tableName} (${tableComment})` : tableName;
 }
 
 function createTableFromDDLData(ddlData: any[], tableName: string, rawData: string): void {
@@ -447,7 +460,7 @@ function createTableFromDDLData(ddlData: any[], tableName: string, rawData: stri
   const titleRowFrame = figma.createFrame();
   titleRowFrame.resize(TABLE_WIDTH, ROW_HEIGHT);
   titleRowFrame.fills = [{ type: 'SOLID', color: TITLE_COLOR }];
-  titleRowFrame.layoutMode = "HORIZONTAL";
+  titleRowFrame.layoutMode = "VERTICAL";
   titleRowFrame.primaryAxisAlignItems = "CENTER";
   titleRowFrame.counterAxisAlignItems = "CENTER";
   titleRowFrame.itemSpacing = 0;
@@ -457,6 +470,15 @@ function createTableFromDDLData(ddlData: any[], tableName: string, rawData: stri
   tableFrame.appendChild(titleRowFrame);
 
   const titleCell = createCell(TABLE_WIDTH, ROW_HEIGHT, TITLE_COLOR, tableName, 20);
+  titleCell.layoutMode = 'VERTICAL';
+  titleCell.primaryAxisSizingMode = 'FIXED';
+  titleCell.counterAxisSizingMode = 'FIXED';
+  titleCell.strokeWeight = 0;
+  titleCell.resize(TABLE_WIDTH, ROW_HEIGHT);
+
+  const titleText = titleCell.children[0] as TextNode;
+  titleText.textAlignHorizontal = "CENTER";
+  titleText.resize(TABLE_WIDTH, ROW_HEIGHT);
   titleRowFrame.appendChild(titleCell);
 
   const headerRowFrame = figma.createFrame();
